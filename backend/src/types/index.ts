@@ -5,7 +5,7 @@ export interface LoadTestRequest{
 }
 
 export interface SingleResult{
-    status : "success" |"fail";
+    status : "success" |"fail"|"rate_limited";
     time:number
 }
 
@@ -13,6 +13,7 @@ export interface LoadTestResponse{
     total:number;
     success:number;
     failed:number;
+    rateLimit:number
     avgTime:number;
     minTime:number;
     maxTime:number;

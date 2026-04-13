@@ -121,9 +121,16 @@ const LoadTesterForm = () => {
               </div>
 
               <div className="bg-white/10 p-3 rounded-lg">
+                <p className="text-gray-300 text-xs">Rate Limited</p>
+                <p className="text-lg font-semibold text-red-400">
+                  {result.rateLimited}
+                </p>
+              </div>
+
+              <div className="bg-white/10 p-3 rounded-lg">
                 <p className="text-gray-300 text-xs">Avg Time</p>
                 <p className="text-lg font-semibold">
-                  {result.avgTime} ms
+                  {result.avgTime.toFixed(2)} ms
                 </p>
               </div>
 
