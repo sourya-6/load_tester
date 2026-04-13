@@ -1,17 +1,19 @@
-import axios, { Axios, toFormData } from "axios";
+import axios from "axios";
 import { LoadTestRequest, LoadTestResponse, SingleResult } from "../types"
+
 
 
 
 const sleep = ((ms:number) => new Promise(resolve => setTimeout(resolve,ms)))
 
-const makeRequest = async(url:string,method:string,retries = 3):Promise<SingleResult> =>{
+const makeRequest = async(url:string,method:"GET"|"POST"|"PATCH" |"PUT" |"DELETE" ,retries = 3):Promise<SingleResult> =>{
     let attempt = 0;
-    while(attempt <= retries){
+    while(attempt < retries){
         const start = Date.now();
 
         try {
-            await axios({url,method})
+            await axios({url,method,timeout:500})
+            //for having the authentication({url,method,headers:data.headers,data:data.body})
             const end = Date.now();
             return{
                 status:"success",
@@ -21,7 +23,7 @@ const makeRequest = async(url:string,method:string,retries = 3):Promise<SingleRe
         } catch (error:any) {
 
             const end = Date.now();
-            if(error.response?.status === 429){
+            if(error.response?.status === 429 || !error.response){
                 if(attempt === retries){
                     return{
                         status:"rate_limited",
@@ -29,7 +31,7 @@ const makeRequest = async(url:string,method:string,retries = 3):Promise<SingleRe
                     }
                 }
 
-                const delay = Math.pow(2,attempt)* 100;
+                const delay = Math.pow(2,attempt)* 100 + Math.random()*100;
                 await sleep(delay);
 
                 attempt++;
@@ -49,7 +51,7 @@ const makeRequest = async(url:string,method:string,retries = 3):Promise<SingleRe
 export const runLoadTest = async (data: LoadTestRequest): Promise<LoadTestResponse> => {
     const {totalRequests,method,url} = data;
     const results:SingleResult[] = [];
-    const batchSize = 50;
+    const batchSize = 100;
     for(let i = 0; i< totalRequests;i+=batchSize){
         const batch:Promise<SingleResult>[] = [];
         
@@ -86,18 +88,24 @@ export const runLoadTest = async (data: LoadTestRequest): Promise<LoadTestRespon
         }
         const batchResults = await Promise.all(batch);
         results.push(...batchResults);
-        await new Promise((res)=>setTimeout(res,50));
+        await new Promise((res)=>setTimeout(res,Math.random()*100+100));
     }
     const success = results.filter(r => r.status ==="success").length;
-    const rateLimit = results.filter(r => r.status ==="rate-limit").length;
+    const rateLimit = results.filter(r => r.status ==="rate_limited").length;
     const fail = results.length - (success+rateLimit);
 
     const times = results.map(t => t.time);
     
-    const avgTime = times.reduce((a,b)=> a+b,0)/times.length;
+    // const avgTime = times.reduce((a,b)=> a+b,0)/times.length;
+    const avgTime = times.length 
+    ? times.reduce((a,b)=> a+b,0)/times.length
+    : 0;
 
-    const minTime = Math.min(...times);
-    const maxTime = Math.max(...times);
+    // const minTime = Math.min(...times);
+    const minTime = times.length?Math.min(...times):0;
+    // const maxTime = Math.max(...times);
+
+    const maxTime = times.length ? Math.max(...times) : 0;
     return {
         total:results.length,
         success,
