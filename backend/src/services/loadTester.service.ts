@@ -1,37 +1,42 @@
-import axios from "axios";
+import axios, { toFormData } from "axios";
 import { LoadTestRequest, LoadTestResponse, SingleResult } from "../types"
 
 
 export const runLoadTest = async (data: LoadTestRequest): Promise<LoadTestResponse> => {
-    const { totalRequests, url, method } = data;
-    const requests: Promise<SingleResult>[] = [];
+    const {totalRequests,method,url} = data;
+    const results:SingleResult[] = [];
+    const batchSize = 50;
+    for(let i = 0; i< totalRequests;i+=batchSize){
+        const batch:Promise<SingleResult>[] = [];
+        
+        const currBatch = Math.min(batchSize,totalRequests - i);
+        for(let j = 0; j < currBatch; j++){
+            const req = (async():Promise<SingleResult> =>{
+                const start = Date.now();
+                try {
+                    await axios({url,method});
+                    const end = Date.now();
+                    return{
+                        status:"success",
+                        time:end - start
+                    }
 
-    for (let i = 0; i < totalRequests; i++) {
-        //Single Request Response it will give
-        const req = (async (): Promise<SingleResult> => {
-            const start = Date.now();
-            try {
-                await axios({
-                    url,
-                    method
-                })
-                const end = Date.now();
-                return {
-                    status: "success",
-                    time: end - start
+                } catch (error) {
+                    const end = Date.now();
 
+                    return{
+                        status:"fail",
+                        time:end - start
+                    }
                 }
-            } catch (error) {
-                const end = Date.now();
-                return{
-                    status:"fail",
-                    time:end - start
-                }
-            }
-        })();
-        requests.push(req);  
+
+            })();
+            batch.push(req);
+        }
+        const batchResults = await Promise.all(batch);
+        results.push(...batchResults);
+        await new Promise((res)=>setTimeout(res,50));
     }
-    const results = await Promise.all(requests);
     const success = results.filter(r => r.status ==="success").length;
     const fail = results.length - success;
 
